@@ -20,19 +20,25 @@ import com.badlogic.gdx.utils.TimeUtils;
 public class Drop extends ApplicationAdapter {
 	private Texture dropImage;
 	private Texture bucketImage;
+	private Texture vaccineImage;
 	private Sound dropSound;
 	private Music rainMusic;
 	private SpriteBatch batch;
 	private OrthographicCamera camera;
 	private Rectangle bucket;
+
 	private Array<Rectangle> raindrops;
+	private Array<Rectangle> vaccinedrops;
+
 	private long lastDropTime;
+	private long lastDropTimeVaccine;
 
 	@Override
 	public void create() {
 		// load the images for the droplet and the bucket, 64x64 pixels each
-		dropImage = new Texture(Gdx.files.internal("droplet.png"));
+		dropImage = new Texture(Gdx.files.internal("covid.png"));
 		bucketImage = new Texture(Gdx.files.internal("bucket.png"));
+		vaccineImage = new Texture(Gdx.files.internal("vaccine.png"));
 
 		// load the drop sound effect and the rain background "music"
 		dropSound = Gdx.audio.newSound(Gdx.files.internal("drop.wav"));
@@ -44,7 +50,7 @@ public class Drop extends ApplicationAdapter {
 
 		// create the camera and the SpriteBatch
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 800, 480);
+		camera.setToOrtho(false, 800, 400);
 		batch = new SpriteBatch();
 
 		// create a Rectangle to logically represent the bucket
@@ -56,7 +62,9 @@ public class Drop extends ApplicationAdapter {
 
 		// create the raindrops array and spawn the first raindrop
 		raindrops = new Array<Rectangle>();
+		vaccinedrops = new Array<Rectangle>();
 		spawnRaindrop();
+		spawnVaccinedrop();
 	}
 
 	private void spawnRaindrop() {
@@ -67,6 +75,15 @@ public class Drop extends ApplicationAdapter {
 		raindrop.height = 64;
 		raindrops.add(raindrop);
 		lastDropTime = TimeUtils.nanoTime();
+	}
+	private void spawnVaccinedrop() {
+		Rectangle vaccindedrop = new Rectangle();
+		vaccindedrop.x = MathUtils.random(0, 800-64);
+		vaccindedrop.y = 480;
+		vaccindedrop.width = 64;
+		vaccindedrop.width = 64;
+		vaccinedrops.add(vaccindedrop);
+		lastDropTimeVaccine = TimeUtils.nanoTime();
 	}
 
 	@Override
@@ -91,6 +108,10 @@ public class Drop extends ApplicationAdapter {
 		for(Rectangle raindrop: raindrops) {
 			batch.draw(dropImage, raindrop.x, raindrop.y);
 		}
+		// vaccine drop
+		for(Rectangle vaccinedrop: vaccinedrops) {
+			batch.draw(vaccineImage, vaccinedrop.x, vaccinedrop.y);
+		}
 		batch.end();
 
 		// process user input
@@ -108,7 +129,12 @@ public class Drop extends ApplicationAdapter {
 		if(bucket.x > 800 - 64) bucket.x = 800 - 64;
 
 		// check if we need to create a new raindrop
-		if(TimeUtils.nanoTime() - lastDropTime > 1000000000) spawnRaindrop();
+		if(TimeUtils.nanoTime() - lastDropTime > 1000000000) {
+			spawnRaindrop();
+		}
+		if(TimeUtils.nanoTime() - lastDropTimeVaccine > 1000000000) {
+			spawnVaccinedrop();
+		}
 
 		// move the raindrops, remove any that are beneath the bottom edge of
 		// the screen or that hit the bucket. In the latter case we play back
@@ -122,6 +148,15 @@ public class Drop extends ApplicationAdapter {
 				iter.remove();
 			}
 		}
+		for (Iterator<Rectangle> iterVC = vaccinedrops.iterator(); iterVC.hasNext(); ) {
+			Rectangle vaccinedrop = iterVC.next();
+			vaccinedrop.y -= 200 * Gdx.graphics.getDeltaTime();
+			if(vaccinedrop.y + 64 < 0) iterVC.remove();
+			if(vaccinedrop.overlaps(bucket)) {
+				dropSound.play();
+				iterVC.remove();
+			}
+		}
 	}
 
 	@Override
@@ -132,5 +167,7 @@ public class Drop extends ApplicationAdapter {
 		dropSound.dispose();
 		rainMusic.dispose();
 		batch.dispose();
+
+		vaccineImage.dispose();
 	}
 }
